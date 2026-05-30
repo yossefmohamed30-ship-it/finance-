@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Finance · Quick Entry</title>
+<style>
+  :root{
+    --bg:#0B0D0F; --card:#14171A; --card2:#101316; --line:#23282D;
+    --green:#3DD66A; --red:#E5564E; --purple:#9B8AD4; --yellow:#E8C547;
+    --blue:#6FA8DC; --cyan:#4ECDC4; --txt:#E7ECF0; --muted:#7C8893;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(61,214,106,.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(111,168,220,.06), transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font-family:var(--mono);
+    display:flex;align-items:center;justify-content:center;
+    padding:18px;min-height:100vh;
+  }
+  .app{width:100%;max-width:440px;}
+  .screen{display:none;animation:rise .45s cubic-bezier(.2,.8,.2,1);}
+  .screen.active{display:block;}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes pop{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+
+  /* ===== LIVING / DYNAMIC ===== */
+  /* breathing background glow */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(600px 360px at 78% 8%, rgba(61,214,106,.10), transparent 60%),
+      radial-gradient(520px 320px at 12% 96%, rgba(111,168,220,.08), transparent 55%);
+    animation:breathe 7s ease-in-out infinite;
+  }
+  .app{position:relative;z-index:1;}
+  @keyframes breathe{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+
+  /* staggered entrance for welcome children */
+  #s-welcome.active > *{opacity:0;animation:enter .55s cubic-bezier(.2,.8,.2,1) forwards;}
+  #s-welcome.active > *:nth-child(1){animation-delay:.02s}
+  #s-welcome.active > *:nth-child(2){animation-delay:.08s}
+  #s-welcome.active > *:nth-child(3){animation-delay:.14s}
+  #s-welcome.active > *:nth-child(4){animation-delay:.20s}
+  #s-welcome.active > *:nth-child(5){animation-delay:.26s}
+  #s-welcome.active > *:nth-child(6){animation-delay:.32s}
+  #s-welcome.active > *:nth-child(7){animation-delay:.38s}
+  @keyframes enter{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+  /* heartbeat dot */
+  .hello .dot{color:var(--green);display:inline-block;animation:beat 1.8s ease-in-out infinite;}
+  @keyframes beat{0%,100%{transform:scale(1);opacity:1}15%{transform:scale(1.35);opacity:.85}30%{transform:scale(1)}}
+
+  /* ---------- WELCOME ---------- */
+  .brand{font-size:13px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+  .hello{font-size:40px;font-weight:800;margin:6px 0 2px;letter-spacing:-1px;}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:24px;}
+
+  /* ---------- BALANCES ---------- */
+  .bal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .bal-head h4{color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0;}
+  .balrefresh{background:var(--card);border:1px solid var(--line);color:var(--green);
+    width:32px;height:32px;border-radius:9px;font-size:16px;cursor:pointer;transition:.2s;}
+  .balrefresh:active{transform:rotate(180deg);}
+  .balrefresh.spin{animation:spin .8s linear infinite;}
+  .balgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:30px;}
+  .balcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+    position:relative;overflow:hidden;cursor:pointer;
+    transition:transform .18s cubic-bezier(.2,.8,.2,1), border-color .25s, box-shadow .25s;
+    animation:cardfloat 6s ease-in-out infinite;}
+  .balcard:nth-child(2){animation-delay:.6s}
+  .balcard:nth-child(3){animation-delay:1.2s}
+  .balcard:nth-child(4){animation-delay:1.8s}
+  @keyframes cardfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  .balcard::after{ /* moving sheen */
+    content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.05),transparent);
+    transform:skewX(-18deg);animation:sheen 5.5s ease-in-out infinite;}
+  @keyframes sheen{0%,72%{left:-60%}88%,100%{left:130%}}
+  .balcard:active{transform:scale(.96);}
+  .balcard:hover{border-color:rgba(61,214,106,.55);box-shadow:0 0 0 1px rgba(61,214,106,.25),0 10px 30px -12px rgba(61,214,106,.4);}
+  .balname{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;position:relative;z-index:1;}
+  .balval{font-size:20px;font-weight:800;color:var(--green);letter-spacing:-.5px;position:relative;z-index:1;
+    text-shadow:0 0 18px rgba(61,214,106,.18);}
+  .balval.neg{color:var(--red);text-shadow:0 0 18px rgba(229,86,78,.2);}
+  .balval.loading{color:var(--muted);font-size:15px;text-shadow:none;}
+  .balval.bump{animation:bump .5s cubic-bezier(.2,1.4,.4,1);}
+  @keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001s!important;animation-iteration-count:1!important;}
+  }
+  .big-btn{
+    width:100%;border:none;border-radius:18px;padding:22px;cursor:pointer;
+    background:linear-gradient(135deg,#3DD66A,#2Ea854);color:#04140a;
+    font-family:var(--mono);font-size:18px;font-weight:800;letter-spacing:.5px;
+    box-shadow:0 12px 30px -8px rgba(61,214,106,.5);transition:transform .15s, box-shadow .15s;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    animation:btnpulse 2.8s ease-in-out infinite;
+  }
+  @keyframes btnpulse{
+    0%,100%{box-shadow:0 12px 30px -8px rgba(61,214,106,.45)}
+    50%{box-shadow:0 12px 42px -6px rgba(61,214,106,.75)}
+  }
+  .big-btn:active{transform:scale(.97);}
+  .plus{font-size:24px;line-height:1;}
+  .recent{margin-top:30px;}
+  .recent h4{color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0 0 10px;}
+  .logrow{display:flex;justify-content:space-between;padding:11px 14px;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;margin-bottom:8px;font-size:13px;animation:pop .3s;}
+  .logrow .meta{color:var(--muted);font-size:11px;}
+  .logrow .amt.neg{color:var(--red);} .logrow .amt.pos{color:var(--green);}
+
+  /* ---------- CARD / STEPS ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;}
+  .topbar{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+  .back{background:var(--card2);border:1px solid var(--line);color:var(--txt);
+    width:40px;height:40px;border-radius:12px;font-size:18px;cursor:pointer;flex:0 0 auto;}
+  .back:active{transform:scale(.93);}
+  .steplabel{font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+  .q{font-size:24px;font-weight:800;margin:10px 0 20px;letter-spacing:-.5px;}
+  .progress{display:flex;gap:6px;margin-bottom:18px;}
+  .pip{height:4px;flex:1;border-radius:3px;background:var(--line);transition:.3s;}
+  .pip.on{background:var(--green);}
+
+  /* choice grid */
+  .choices{display:grid;gap:12px;}
+  .choices.two{grid-template-columns:1fr 1fr;}
+  .choice{
+    border:1px solid var(--line);background:var(--card2);color:var(--txt);
+    padding:20px 16px;border-radius:16px;font-family:var(--mono);font-size:16px;font-weight:700;
+    cursor:pointer;text-align:left;transition:.15s;display:flex;align-items:center;gap:12px;
+  }
+  .choice:active{transform:scale(.97);}
+  .choice .ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    font-size:16px;flex:0 0 auto;font-weight:800;}
+  .choice small{display:block;color:var(--muted);font-size:11px;font-weight:400;margin-top:3px;}
+  .choice.sel{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset;}
+
+  /* big number input */
+  .amount-wrap{text-align:center;padding:10px 0 4px;}
+  .amount-input{
+    background:transparent;border:none;color:var(--txt);font-family:var(--mono);
+    font-size:58px;font-weight:800;text-align:center;width:100%;outline:none;letter-spacing:-2px;
+  }
+  .amount-input::placeholder{color:#2c333a;}
+  .amt-hint{color:var(--muted);font-size:12px;margin-top:4px;}
+  .flow-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:20px;
+    font-size:12px;font-weight:700;margin:0 auto 6px;}
+  .flow-pill.out{background:rgba(229,86,78,.14);color:var(--red);}
+  .flow-pill.in{background:rgba(61,214,106,.14);color:var(--green);}
+
+  /* text input */
+  .field{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:14px;
+    color:var(--txt);font-family:var(--mono);font-size:16px;padding:16px;outline:none;}
+  .field:focus{border-color:var(--blue);}
+  textarea.field{resize:none;min-height:54px;}
+
+  /* search + scroll list for categories */
+  .search{margin-bottom:10px;}
+  .catlist{max-height:330px;overflow-y:auto;display:grid;gap:8px;padding-right:4px;}
+  .catlist::-webkit-scrollbar{width:8px;} .catlist::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;}
+  .cat{border:1px solid var(--line);background:var(--card2);color:var(--txt);padding:13px 14px;border-radius:12px;
+    font-family:var(--mono);font-size:14px;cursor:pointer;text-align:left;transition:.12s;}
+  .cat:active{transform:scale(.98);} .cat.sel{border-color:var(--green);color:var(--green);}
+
+  .next{width:100%;border:none;border-radius:16px;padding:18px;margin-top:18px;cursor:pointer;
+    background:var(--green);color:#04140a;font-family:var(--mono);font-size:16px;font-weight:800;
+    transition:.15s;}
+  .next:disabled{background:#1d2228;color:#4a525a;cursor:not-allowed;}
+  .next:active:not(:disabled){transform:scale(.98);}
+  .skip{width:100%;background:none;border:none;color:var(--muted);font-family:var(--mono);
+    font-size:13px;margin-top:12px;cursor:pointer;text-decoration:underline;}
+
+  /* review */
+  .rev{display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);font-size:14px;}
+  .rev:last-child{border-bottom:none;} .rev .k{color:var(--muted);}
+  .rev .v{font-weight:700;text-align:right;max-width:60%;word-break:break-word;}
+
+  /* success */
+  .done{text-align:center;padding:30px 10px;}
+  .check{width:84px;height:84px;border-radius:50%;background:rgba(61,214,106,.13);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 18px;animation:pop .4s;}
+  .check svg{width:42px;height:42px;}
+  .done h2{font-size:26px;margin:0 0 6px;} .done p{color:var(--muted);margin:0 0 26px;}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+    background:#1b2128;border:1px solid var(--line);color:var(--txt);padding:14px 20px;border-radius:14px;
+    font-size:13px;transition:.35s;z-index:50;max-width:90%;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  .spinner{width:20px;height:20px;border:3px solid rgba(4,20,10,.3);border-top-color:#04140a;border-radius:50%;
+    display:inline-block;animation:spin .7s linear infinite;vertical-align:-4px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== WELCOME ===== -->
+  <section id="s-welcome" class="screen active">
+    <div class="brand">Personal Wealth Tracker</div>
+    <div class="hello">Welcome, Joe<span class="dot">.</span></div>
+    <div class="sub" id="todayline"></div>
+
+    <!-- LIVE ACCOUNT BALANCES -->
+    <div class="bal-head">
+      <h4>Available balances</h4>
+      <button id="balrefresh" class="balrefresh" onclick="loadBalances()" title="Refresh">⟳</button>
+    </div>
+    <div class="balgrid" id="balgrid">
+      <div class="balcard"><div class="balname">Insta / QNB</div><div class="balval" id="b-insta">—</div></div>
+      <div class="balcard"><div class="balname">Cash</div><div class="balval" id="b-cash">—</div></div>
+      <div class="balcard"><div class="balname">VF Visa</div><div class="balval" id="b-vf">—</div></div>
+      <div class="balcard"><div class="balname">Visa Misr</div><div class="balval" id="b-visamisr">—</div></div>
+    </div>
+
+    <button class="big-btn" onclick="startFlow()"><span class="plus">+</span> Add New Entry</button>
+    <div class="recent">
+      <h4>Logged this session</h4>
+      <div id="sessionlog"><div class="logrow"><span class="meta">No entries yet — tap the button above.</span></div></div>
+    </div>
+  </section>
+
+  <!-- ===== FLOW ===== -->
+  <section id="s-flow" class="screen">
+    <div class="card">
+      <div class="topbar">
+        <button class="back" onclick="goBack()">‹</button>
+        <div>
+          <div class="steplabel" id="steplabel">STEP 1</div>
+        </div>
+      </div>
+      <div class="progress" id="pips"></div>
+      <div id="stepbody"></div>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ CONFIG ============ */
+// ⚙️ PASTE your Apps Script Web App URL here after deploying (Step 2):
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw-3Za6jyZnyaZD9nk2yDnOMz8BaNt3GxTbabaDUmL5w-A4RFTAqcarQUbpivEvC1oY/exec";
+
+const ACCOUNTS = ["Qnb","Insta","Cash","VF","Visa-Misr","AnQa"];
+
+const EXPENSE_TYPES = [
+  "Paycheck","Bonus","Indriver","Parental Support","Side Income","Indriver fees",
+  "Loan","Repaid","Dollar Withdrawal","Dollar Deposit","Breakfast","Diet Food","Junk",
+  "snacks","Fuel","Car repair","Clothes","Personal Items","Accessories","Supplements",
+  "Water","Education fees","Medicine","Internet","Calls","One-Off","Gameaa","Tips& Gratuities",
+  "Occasional Supplies","Minor Maintenance","Laundry","Lost","Haircut","Withdrawal fees",
+  "Fruits","Beverages","Oil change","Gym","Apple storage","Chatgpt","Boxing PT","Boxing Group",
+  "Youtube","Fuel Reimbursement","Engine Oil Reimbursement","Vehicle Maintenamce Uplift",
+  "Transfer=>Insta","Transfer=>VF","Transfer=>Visa-Misr","Transfer=>Cash","Transfer=>Qnb","Uber"
+];
+
+const DOLLAR_TYPES = ["Transfer In","Transfer Out","Profit","loss","Loan","Repaid"];
+
+const ACCENT = {Qnb:"#E8C547",Insta:"#9B8AD4",Cash:"#6FA8DC",VF:"#E5564E","Visa-Misr":"#3DD66A",AnQa:"#E5564E"};
+
+/* ============ STATE ============ */
+let entry = {};
+let stepIndex = 0;
+let steps = [];
+const sessionLog = [];
+
+document.getElementById('todayline').textContent =
+  new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+/* ============ LIVE BALANCES (JSONP, reads from your sheet) ============ */
+function loadBalances(){
+  var btn = document.getElementById('balrefresh');
+  if(btn) btn.classList.add('spin');
+  ['b-insta','b-cash','b-vf','b-visamisr'].forEach(function(id){
+    var el=document.getElementById(id); el.textContent="…"; el.className="balval loading";
+  });
+  // unique callback name to avoid caching
+  var cbName = "balCB_" + Date.now();
+  window[cbName] = function(data){
+    showBalances(data);
+    if(btn) btn.classList.remove('spin');
+    delete window[cbName];
+    if(s) s.remove();
+  };
+  var url = WEB_APP_URL + "?action=balances&callback=" + cbName + "&t=" + Date.now();
+  var s = document.createElement('script');
+  s.src = url;
+  s.onerror = function(){
+    if(btn) btn.classList.remove('spin');
+    ['b-insta','b-cash','b-vf','b-visamisr'].forEach(function(id){
+      var el=document.getElementById(id); el.textContent="—"; el.className="balval";
+    });
+    toast("⚠️ Couldn't load balances. Pull to refresh.");
+    delete window[cbName];
+  };
+  document.body.appendChild(s);
+}
+
+function showBalances(d){
+  setBal('b-insta', d.insta);
+  setBal('b-cash', d.cash);
+  setBal('b-vf', d.vf);
+  setBal('b-visamisr', d.visamisr);
+}
+function setBal(id, val){
+  var el=document.getElementById(id);
+  if(val===undefined||val===null||isNaN(val)){ el.textContent="—"; el.className="balval"; return; }
+  var target=Math.round(Number(val));
+  el.className="balval"+(target<0?" neg":"");
+  // count up animation
+  var dur=900, start=performance.now(), from=0;
+  function frame(now){
+    var p=Math.min(1,(now-start)/dur);
+    var eased=1-Math.pow(1-p,3); // ease-out cubic
+    var cur=Math.round(from+(target-from)*eased);
+    el.textContent=cur.toLocaleString()+" EGP";
+    if(p<1){ requestAnimationFrame(frame); }
+    else { el.classList.add('bump'); setTimeout(function(){el.classList.remove('bump');},500); }
+  }
+  requestAnimationFrame(frame);
+}
+
+// load balances when the app opens
+loadBalances();
+
+/* ============ FLOW DEFINITION ============ */
+function buildSteps(){
+  if(entry.sheet === "Dollar"){
+    steps = ["sheet","amount","desc","dollarType","review"];
+  } else if(entry.sheet === "AnQa"){
+    steps = ["sheet","flow","amount","account","desc","review"];
+  } else { // Cash
+    steps = ["sheet","flow","amount","account","desc","expType","review"];
+  }
+}
+
+function startFlow(){
+  entry = {flow:"out"}; stepIndex = 0;
+  steps = ["sheet"]; // sheet first; rest built after sheet pick
+  show('s-flow'); renderStep();
+}
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goBack(){
+  if(stepIndex === 0){ show('s-welcome'); return; }
+  stepIndex--; renderStep();
+}
+
+function next(){ stepIndex++; renderStep(); }
+
+function renderPips(){
+  const pips = document.getElementById('pips'); pips.innerHTML='';
+  steps.forEach((_,i)=>{ const d=document.createElement('div'); d.className='pip'+(i<=stepIndex?' on':''); pips.appendChild(d); });
+  document.getElementById('steplabel').textContent = "STEP "+(stepIndex+1)+" / "+steps.length;
+}
+
+function renderStep(){
+  renderPips();
+  const step = steps[stepIndex];
+  const body = document.getElementById('stepbody');
+  body.innerHTML = "";
+
+  /* ---- SHEET ---- */
+  if(step==="sheet"){
+    body.appendChild(html(`<div class="q">Which account book?</div>`));
+    const g = div("choices");
+    [["Cash","Daily spending & income","#6FA8DC","💵"],
+     ["Dollar","USDT transfers & profit","#9B8AD4","＄"],
+     ["AnQa","Company account","#E5564E","🏢"]].forEach(([name,sub,clr,ic])=>{
+      const b = document.createElement('button'); b.className="choice";
+      b.innerHTML = `<span class="ic" style="background:${clr}22;color:${clr}">${ic}</span>
+        <span>${name}<small>${sub}</small></span>`;
+      b.onclick=()=>{ entry.sheet=name; buildSteps(); next(); };
+      g.appendChild(b);
+    });
+    body.appendChild(g);
+  }
+
+  /* ---- FLOW (expense/income) ---- */
+  else if(step==="flow"){
+    body.appendChild(html(`<div class="q">Money out or in?</div>`));
+    const g = div("choices two");
+    [["out","Expense","#E5564E","−"],["in","Income","#3DD66A","+"]].forEach(([v,label,clr,sign])=>{
+      const b=document.createElement('button'); b.className="choice"; b.style.justifyContent="center";
+      b.innerHTML=`<span class="ic" style="background:${clr}22;color:${clr};font-size:20px">${sign}</span><span>${label}</span>`;
+      b.onclick=()=>{ entry.flow=v; next(); };
+      g.appendChild(b);
+    });
+    body.appendChild(g);
+  }
+
+  /* ---- AMOUNT ---- */
+  else if(step==="amount"){
+    const isDollar = entry.sheet==="Dollar";
+    const flowPill = !isDollar ? `<div class="flow-pill ${entry.flow==='out'?'out':'in'}">${entry.flow==='out'?'− Expense':'+ Income'}</div>` : '';
+    body.appendChild(html(`<div class="q">How much?</div>
+      <div class="amount-wrap">${flowPill}
+      <input class="amount-input" id="amt" type="number" inputmode="decimal" placeholder="0" />
+      <div class="amt-hint">${isDollar?'Enter the value (− if it leaves your balance)':'Just the number — sign added automatically'}</div></div>`));
+    const nx = mkNext("Continue"); body.appendChild(nx);
+    const amt = document.getElementById('amt');
+    amt.focus();
+    amt.oninput=()=>{ nx.disabled = !(amt.value!=="" && !isNaN(amt.value)); };
+    nx.disabled=true;
+    nx.onclick=()=>{ entry.amount=parseFloat(amt.value); next(); };
+  }
+
+  /* ---- ACCOUNT ---- */
+  else if(step==="account"){
+    body.appendChild(html(`<div class="q">Which account?</div>`));
+    const g=div("choices two");
+    ACCOUNTS.forEach(a=>{
+      const clr=ACCENT[a]||"#6FA8DC";
+      const b=document.createElement('button'); b.className="choice"; b.style.justifyContent="center";
+      b.innerHTML=`<span class="ic" style="background:${clr}22;color:${clr}">${a[0]}</span><span>${a}</span>`;
+      b.onclick=()=>{ entry.account=a; next(); };
+      g.appendChild(b);
+    });
+    body.appendChild(g);
+  }
+
+  /* ---- DESCRIPTION ---- */
+  else if(step==="desc"){
+    body.appendChild(html(`<div class="q">Add a note</div>
+      <textarea class="field" id="desc" placeholder="Description (optional)…">${entry.desc||''}</textarea>`));
+    const nx=mkNext("Continue"); body.appendChild(nx);
+    const sk=document.createElement('button'); sk.className="skip"; sk.textContent="Skip this";
+    sk.onclick=()=>{ entry.desc=""; next(); };
+    body.appendChild(sk);
+    document.getElementById('desc').focus();
+    nx.onclick=()=>{ entry.desc=document.getElementById('desc').value.trim(); next(); };
+  }
+
+  /* ---- EXPENSE TYPE (Cash only) ---- */
+  else if(step==="expType"){
+    body.appendChild(html(`<div class="q">Type of ${entry.flow==='out'?'expense':'income'}</div>
+      <input class="field search" id="catsearch" placeholder="Search type…" />`));
+    const list=div("catlist"); list.id="catlist";
+    EXPENSE_TYPES.forEach(t=>{
+      const b=document.createElement('button'); b.className="cat"; b.textContent=t;
+      b.onclick=()=>{ entry.expType=t; next(); };
+      list.appendChild(b);
+    });
+    body.appendChild(list);
+    document.getElementById('catsearch').oninput=function(){
+      const q=this.value.toLowerCase();
+      [...list.children].forEach(c=>{ c.style.display=c.textContent.toLowerCase().includes(q)?'':'none'; });
+    };
+  }
+
+  /* ---- DOLLAR TYPE ---- */
+  else if(step==="dollarType"){
+    body.appendChild(html(`<div class="q">Transfer / Profit type</div>`));
+    const g=div("choices");
+    DOLLAR_TYPES.forEach(t=>{
+      const b=document.createElement('button'); b.className="choice"; b.textContent=t;
+      b.onclick=()=>{ entry.dollarType=t; next(); };
+      g.appendChild(b);
+    });
+    body.appendChild(g);
+  }
+
+  /* ---- REVIEW ---- */
+  else if(step==="review"){
+    const signedAmount = computeAmount();
+    let rows = `<div class="rev"><span class="k">Sheet</span><span class="v">${entry.sheet}</span></div>`;
+    if(entry.sheet!=="Dollar") rows += `<div class="rev"><span class="k">Type</span><span class="v">${entry.flow==='out'?'Expense (−)':'Income (+)'}</span></div>`;
+    rows += `<div class="rev"><span class="k">Amount</span><span class="v" style="color:${signedAmount<0?'var(--red)':'var(--green)'}">${signedAmount.toLocaleString()}</span></div>`;
+    if(entry.account) rows += `<div class="rev"><span class="k">Account</span><span class="v">${entry.account}</span></div>`;
+    if(entry.desc) rows += `<div class="rev"><span class="k">Note</span><span class="v">${escapeHtml(entry.desc)}</span></div>`;
+    if(entry.expType) rows += `<div class="rev"><span class="k">Category</span><span class="v">${entry.expType}</span></div>`;
+    if(entry.dollarType) rows += `<div class="rev"><span class="k">Transfer</span><span class="v">${entry.dollarType}</span></div>`;
+    body.appendChild(html(`<div class="q">Review & save</div>${rows}`));
+    const nx=mkNext("✓ Save to Sheet"); body.appendChild(nx);
+    nx.onclick=()=>saveEntry(nx);
+  }
+}
+
+function computeAmount(){
+  let a = Math.abs(entry.amount||0);
+  if(entry.sheet==="Dollar") return entry.amount; // user enters sign themselves
+  return entry.flow==="out" ? -a : a;
+}
+
+/* ============ SAVE ============ */
+function saveEntry(btn){
+  const payload = {
+    sheet: entry.sheet,
+    amount: computeAmount(),
+    account: entry.account||"",
+    description: entry.desc||"",
+    expenseType: entry.expType||"",
+    dollarType: entry.dollarType||""
+  };
+  btn.disabled=true; btn.innerHTML=`<span class="spinner"></span> Saving…`;
+
+  if(WEB_APP_URL==="PASTE_YOUR_WEB_APP_URL_HERE"){
+    // Demo mode (no backend yet)
+    setTimeout(()=>{ onSaved(payload, true); }, 700);
+    return;
+  }
+  // Apps Script + static HTML: a normal fetch can't read the response (CORS),
+  // so we POST in no-cors mode (fire-and-forget) and treat a completed send as success.
+  fetch(WEB_APP_URL,{
+    method:"POST",
+    mode:"no-cors",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify(payload)
+  }).then(()=>{
+    onSaved(payload,false);
+  }).catch(err=>{
+    btn.disabled=false; btn.innerHTML="✓ Save to Sheet";
+    toast("⚠️ Couldn't reach the sheet. Check your connection.");
+  });
+}
+
+function onSaved(payload, demo){
+  // session log
+  sessionLog.unshift(payload);
+  renderSessionLog();
+  // refresh balances so the new entry is reflected
+  setTimeout(loadBalances, 1200);
+  // success screen
+  const body=document.getElementById('stepbody');
+  document.getElementById('pips').innerHTML="";
+  document.getElementById('steplabel').textContent="DONE";
+  body.innerHTML=`<div class="done">
+     <div class="check"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" fill="none" stroke="#3DD66A" stroke-width="3"/><path fill="none" stroke="#3DD66A" stroke-width="4" stroke-linecap="round" d="M14 27l8 8 16-17"/></svg></div>
+     <h2>Saved${demo?' (demo)':''}!</h2>
+     <p>${demo?'Connect the script to write to your sheet.':'Added to your '+payload.sheet+' sheet.'}</p>
+     <button class="next" onclick="startFlow()" style="max-width:none">+ Add another</button>
+     <button class="skip" onclick="show('s-welcome')">Back to home</button>
+  </div>`;
+  if(demo) toast("Demo mode — paste your Web App URL to go live.");
+}
+
+function renderSessionLog(){
+  const box=document.getElementById('sessionlog');
+  if(!sessionLog.length){ box.innerHTML=`<div class="logrow"><span class="meta">No entries yet.</span></div>`; return; }
+  box.innerHTML="";
+  sessionLog.slice(0,6).forEach(e=>{
+    const r=document.createElement('div'); r.className="logrow";
+    const label = e.expenseType||e.dollarType||e.description||e.sheet;
+    r.innerHTML=`<span>${escapeHtml(label)||e.sheet}<div class="meta">${e.sheet}${e.account?' · '+e.account:''}</div></span>
+      <span class="amt ${e.amount<0?'neg':'pos'}">${e.amount.toLocaleString()}</span>`;
+    box.appendChild(r);
+  });
+}
+
+/* ============ HELPERS ============ */
+function html(s){ const d=document.createElement('div'); d.innerHTML=s; return d; }
+function div(cls){ const d=document.createElement('div'); d.className=cls; return d; }
+function mkNext(label){ const b=document.createElement('button'); b.className="next"; b.textContent=label; return b; }
+function escapeHtml(s){ return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+let toastT;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),3200); }
+</script>
+</body>
+</html>
